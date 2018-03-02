@@ -1,4 +1,4 @@
-;;; revive.el --- Resume Emacs -*- coding: utf-8-unix; tab-width: 8; -*-
+;;; revive.el --- Resume Emacs -*- coding: utf-8-unix; -*-
 ;;; (c) 1994-2014 by HIROSE Yuuji [yuuji@gentei.org]
 ;;; $Id: revive.el,v 2.24 2017/11/30 03:21:59 yuuji Exp $
 ;;; Last modified Thu Nov 30 12:14:10 2017 on firestorm
@@ -530,12 +530,18 @@ property list is formed as
         (set-buffer (window-buffer (car wlist)))
         (setq buflist
               (append buflist (list (list
-                                     (if (and
+                                     (cond
+                                      ((and
                                           (buffer-file-name)
                                           (fboundp 'abbreviate-file-name))
                                          (abbreviate-file-name
-                                          (buffer-file-name))
-                                       (buffer-file-name))
+                                          (buffer-file-name)))
+                                      ((eq major-mode 'dired-mode)
+                                       ;; in case of dired-mode,
+                                       ;; use `default-directory'
+                                       default-directory)
+                                      (t
+                                       (buffer-file-name)))
                                      (buffer-name)
                                      (point)
                                      (window-start))))
@@ -590,7 +596,10 @@ current-window-configuration-printable."
         (set-window-start nil (point))
         (goto-char (revive:get-point buf)))
        ((and (stringp (revive:get-file buf))
-             (not (file-directory-p (revive:get-file buf)))
+             (or (not (file-directory-p (revive:get-file buf)))
+                 ;; even if this is a directory, we get a go if
+                 ;; `find-file-run-dired' is t.
+                 find-file-run-dired)
              (revive:find-file (revive:get-file buf)))
         (set-window-start nil (revive:get-window-start buf))
         (goto-char (revive:get-point buf))))
